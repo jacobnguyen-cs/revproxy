@@ -1,0 +1,14 @@
+# Claude Code machine-specific settings
+.claude/settings.local.json
+
+# Go build output
+/revproxy
+*.exe
+*.test
+*.out
+
+# Editor/OS junk
+.vscode/
+.idea/
+.DS_Store
+EOF
