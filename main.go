@@ -17,22 +17,17 @@ var client = &http.Client{
 func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	req, err := http.NewRequestWithContext(r.Context(), r.Method, backendURL+r.RequestURI, r.Body)
 	if err != nil {
-		log.Printf("Create request error: %v", err)
-		http.Error(w, "Could not create request", http.StatusInternalServerError)
+		log.Printf("create request error: %v", err)
+		http.Error(w, "Bad Gateway", http.StatusInternalServerError)
 		return
 	}
-
-	for key, values := range r.Header {
-		for _, value := range values {
-			req.Header.Add(key, value)
-		}
-	}
+	req.Header = r.Header.Clone()
 	req.ContentLength = r.ContentLength
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Backend error: %v", err)
-		http.Error(w, "Could not send request", http.StatusBadGateway)
+		log.Printf("backend error: %v", err)
+		http.Error(w, "Bad Gateway", http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
@@ -45,7 +40,7 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	if _, err := io.Copy(w, resp.Body); err != nil {
-		log.Printf("Could not copy response body: %v", err)
+		log.Printf("could not copy response body: %v", err)
 	}
 }
 
