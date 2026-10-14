@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 const backendURL = "https://httpbin.org"
@@ -12,6 +13,22 @@ var client = &http.Client{
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
 	},
+}
+
+var hopHeaders = []string{"Keep-Alive", "Transfer-Encoding", "Upgrade", "Proxy-Authorization", "Proxy-Authenticate", "Proxy-Connection", "Te", "Trailer"}
+
+func removeHopByHopHeaders(h http.Header) {
+	for _, line := range h.Values("Connection") {
+		names := strings.Split(line, ",")
+		for _, name := range names {
+			h.Del(strings.TrimSpace(name))
+		}
+	}
+	h.Del("Connection")
+
+	for _, value := range hopHeaders {
+		h.Del(value)
+	}
 }
 
 func proxyHandler(w http.ResponseWriter, r *http.Request) {
@@ -23,6 +40,7 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Header = r.Header.Clone()
 	req.ContentLength = r.ContentLength
+	removeHopByHopHeaders(req.Header)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -37,6 +55,7 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add(key, value)
 		}
 	}
+	removeHopByHopHeaders(resp.Header)
 
 	w.WriteHeader(resp.StatusCode)
 	if _, err := io.Copy(w, resp.Body); err != nil {
